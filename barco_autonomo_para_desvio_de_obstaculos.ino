@@ -7,13 +7,13 @@
 #define SONAR_ECHO 5
 #define LED_RED 12
 #define BUZZER 13
-#define MOTOR_IN1 8  
-#define MOTOR_IN2 9  
-#define MOTOR_ENA 10 
+#define MOTOR_IN1 9  
+#define MOTOR_IN2 10  
+#define MOTOR_ENA 11
 #define SERVO_PIN 4
 
-#define DISTANCIA_PERIGOSA 3
-#define DISTANCIA_RAZOAVEL_MIN 10
+#define DISTANCIA_PERIGOSA 8
+#define DISTANCIA_RAZOAVEL_MIN 15
 #define DISTANCIA_RAZOAVEL_MAX 30
 
 Servo meuServo;
@@ -86,8 +86,8 @@ int medirDistancia(int triggerPin, int echoPin, int sensor) {
 
 void medirDistanciaTask(void *pvParameters) {
   while (1) {
-    int leituraEsq = medirDistancia(SONAR2_TRIGGER, SONAR2_ECHO, 1);
-    int leituraDir = medirDistancia(SONAR_TRIGGER, SONAR_ECHO, 0);
+    int leituraEsq = medirDistancia(SONAR_TRIGGER, SONAR_ECHO, 0);
+    int leituraDir = medirDistancia(SONAR2_TRIGGER, SONAR2_ECHO, 1);
 
     if (leituraEsq != -1 && leituraDir != -1) {
       taskENTER_CRITICAL();
@@ -116,12 +116,12 @@ void controlarMotorTask(void *pvParameters) {
     } else if (distanciaMinima >= DISTANCIA_RAZOAVEL_MIN && distanciaMinima < DISTANCIA_RAZOAVEL_MAX) {
       digitalWrite(MOTOR_IN1, HIGH);
       digitalWrite(MOTOR_IN2, LOW);
-      analogWrite(MOTOR_ENA, 255);
+      analogWrite(MOTOR_ENA, 84); 
       Serial.println(F("Motor: Distância razoável. Velocidade média."));
     } else if (distanciaMinima >= DISTANCIA_RAZOAVEL_MAX) {
       digitalWrite(MOTOR_IN1, HIGH);
       digitalWrite(MOTOR_IN2, LOW);
-      analogWrite(MOTOR_ENA, 255); 
+      analogWrite(MOTOR_ENA, 124); 
       Serial.println(F("Motor: Distância segura. Velocidade máxima."));
     }
     vTaskDelay(pdMS_TO_TICKS(100));
@@ -138,15 +138,18 @@ void controlarServoTask(void *pvParameters) {
     int diferenca = abs(distEsq - distDir);
 
     if (distEsq >= DISTANCIA_PERIGOSA && distDir >= DISTANCIA_PERIGOSA) {
-      if (diferenca <= 6) {
+      if(diferenca <= 6 && distEsq <= DISTANCIA_RAZOAVEL_MAX && distDir <= DISTANCIA_RAZOAVEL_MAX && distEsq > DISTANCIA_RAZOAVEL_MIN && distDir > DISTANCIA_RAZOAVEL_MIN){
         meuServo.write(135);
         Serial.println(F("Obstáculo central! Desviando para a direita."));
-      } else if (distEsq >= DISTANCIA_RAZOAVEL_MIN && distEsq <= DISTANCIA_RAZOAVEL_MAX) {
-        meuServo.write(135); 
-      } else if (distDir >= DISTANCIA_RAZOAVEL_MIN && distDir <= DISTANCIA_RAZOAVEL_MAX) {
-        meuServo.write(45); 
-      } else {
-        meuServo.write(90); 
+      }
+      else{
+        if (distEsq >= DISTANCIA_RAZOAVEL_MIN && distEsq <= DISTANCIA_RAZOAVEL_MAX) {
+          meuServo.write(135); 
+        } else if (distDir >= DISTANCIA_RAZOAVEL_MIN && distDir <= DISTANCIA_RAZOAVEL_MAX) {
+          meuServo.write(45); 
+        } else {
+          meuServo.write(90); 
+        }
       }
     } else {
       meuServo.write(90);
